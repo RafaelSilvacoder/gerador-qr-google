@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gerador de Placa de Avaliação 10x15</title>
-  <!-- Biblioteca para converter HTML em Imagem alta resolução -->
+  <!-- Biblioteca para converter HTML em Imagem -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <!-- Biblioteca para gerar QR Code via Canvas nativo -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Biblioteca para gerar PDF diretamente no navegador -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
     body { background-color: #eef2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; min-height: 100vh; justify-content: space-between; }
     
-    .content-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; }
-
     .painel-controle { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 420px; width: 100%; margin-bottom: 25px; }
     h2 { color: #1a73e8; margin-top: 0; font-size: 20px; text-align: center; }
     label { font-weight: bold; font-size: 13px; color: #333; display: block; margin-top: 12px; margin-bottom: 6px; }
@@ -24,7 +24,7 @@
     .btn-acao.baixar:hover { background-color: #2d8e47; }
 
     /* Proporção 10x15cm (300px x 450px no ecrã) */
-    .preview-container { display: flex; justify-content: center; width: 100%; margin-bottom: 30px; }
+    .preview-container { display: flex; justify-content: center; width: 100%; flex-grow: 1; }
     .placa-10x15 { width: 300px; height: 450px; border-radius: 8px; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 25px 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
 
     /* MODELO 1: PRETO / PREMIUM */
@@ -56,37 +56,35 @@
     .g-yellow { color: #fbbc05; }
     .g-green { color: #34a853; }
 
-    /* Rodapé da Aplicação */
-    footer { text-align: center; padding: 15px; font-size: 14px; color: #555; }
+    /* Rodapé da Página Web */
+    footer { margin-top: 30px; font-size: 14px; color: #555; text-align: center; }
     footer a { color: #1a73e8; text-decoration: none; font-weight: bold; }
     footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
 
-  <div class="content-wrap">
-    <div class="painel-controle">
-      <h2>Gerador de Placa Google (10x15)</h2>
-      
-      <label for="placeId">Place ID da Empresa:</label>
-      <input type="text" id="placeId" placeholder="Cole o Place ID aqui...">
+  <div class="painel-controle">
+    <h2>Gerador de Placa Google (10x15)</h2>
+    
+    <label for="placeId">Place ID da Empresa:</label>
+    <input type="text" id="placeId" placeholder="Cole o Place ID aqui...">
 
-      <label for="templateSelect">Escolha o Modelo de Placa:</label>
-      <select id="templateSelect" onchange="trocarModelo()">
-        <option value="dark">Modelo 1: Fundo Preto (Premium)</option>
-        <option value="light">Modelo 2: Fundo Branco (Minimalista)</option>
-      </select>
+    <label for="templateSelect">Escolha o Modelo de Placa:</label>
+    <select id="templateSelect" onchange="trocarModelo()">
+      <option value="dark">Modelo 1: Fundo Preto (Premium)</option>
+      <option value="light">Modelo 2: Fundo Branco (Minimalista)</option>
+    </select>
 
-      <button id="btnPrincipal" class="btn-acao" onclick="processarPlaca()">Gerar Placa 10x15</button>
-    </div>
+    <button id="btnPrincipal" class="btn-acao" onclick="processarPlaca()">Gerar Placa 10x15</button>
+  </div>
 
-    <div class="preview-container">
-      <div id="placaArea" class="placa-10x15 theme-dark"></div>
-    </div>
+  <div class="preview-container">
+    <div id="placaArea" class="placa-10x15 theme-dark"></div>
   </div>
 
   <footer>
-    Desenvolvido por <a href="https://instagram.com/rafasonnedev" target="_blank" rel="noopener noreferrer">Rafael Silva</a>
+    Desenvolvido por <a href="https://www.instagram.com/rafasonnedev" target="_blank">Rafael Silva (@rafasonnedev)</a>
   </footer>
 
   <script>
@@ -187,7 +185,7 @@
       const btn = document.getElementById('btnPrincipal');
 
       if (placaPronta) {
-        baixarImagem();
+        baixarPDF();
         return;
       }
 
@@ -202,23 +200,31 @@
       
       atualizarLayout();
 
-      btn.textContent = "Baixar Imagem 10x15";
+      btn.textContent = "Baixar Placa em PDF (10x15 cm)";
       btn.classList.add("baixar");
     }
 
-    function baixarImagem() {
+    function baixarPDF() {
       const placa = document.getElementById('placaArea');
       
-      // Renderiza em 4x (300 DPI) para impressão perfeita no acrílico
+      // Renderiza em alta resolução (scale: 4)
       html2canvas(placa, { 
         scale: 4, 
         useCORS: true, 
         logging: false 
       }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = 'placa-google-10x15.png';
-        link.href = canvas.toDataURL('image/png', 1.0);
-        link.click();
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        
+        // Inicializa jsPDF nas dimensões exatas de 100mm x 150mm (10x15cm)
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: [100, 150]
+        });
+
+        pdf.addImage(imgData, 'PNG', 0, 0, 100, 150);
+        pdf.save('placa-google-10x15cm.pdf');
       });
     }
 
